@@ -2,6 +2,7 @@ import inspect
 import json
 import requests
 import sys
+import threading
 import time
 
 ew_devid = "f4a5717d-9942-41d7-8d67-11ecafc6e66c"
@@ -9,7 +10,38 @@ ew_usern = "dthompson"
 ew_passw = "gettingvizzy4it"
 ew_sessn = ""
 
+########################################################
+###  Method: getthepcsysinfo()
+###  Purpose:
+###  Date: 09/04/2024
+########################################################
+def getthepcsysinfo(ewonname):
+  try:
+    thisewonssysinfo = "https://m2web.talk2m.com/t2mapi/get/"+ewonname+"/proxy/10.11.104.11/WebView/SystemInfoPartial&t2maccount=Hartness&t2musername="+ew_usern+"&t2mpassword="+ew_passw+"&t2mdeveloperid="+ew_devid
+    try:
+      tryingtoreach = requests.get(thisewonssysinfo,timeout=5.0)
+      print(ewonname+" returned "+str(tryingtoreach.status_code)+".")
+      if tryingtoreach.status_code == 200:
+        print("  writing "+ewonname+".html")
+        with open(ewonname+"_SysInfoPart.html","w") as fp:
+          # fp.write(tryingtoreach.content.decode())
+          fp.write(tryingtoreach.text)
+      else:
+        print("  dropping "+ewonname+".html")
+    except Exception as exception:
+      exc_type, exc_obj, exc_tb = sys.exc_info()
+      errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
+      print(errorstring)
+  except Exception as exception:
+    exc_type, exc_obj, exc_tb = sys.exc_info()
+    errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
+    print(errorstring)
 
+########################################################
+###  Method: main()
+###  Purpose:
+###  Date: 09/04/2024
+########################################################
 logmein = "https://m2web.talk2m.com/t2mapi/login?t2maccount=Hartness&t2musername="+ew_usern+"&t2mpassword="+ew_passw+"&t2mdeveloperid="+ew_devid
 connectionsults = requests.get(logmein)
 ew_sessn = json.loads(connectionsults.content.decode())["t2msession"]
@@ -23,26 +55,33 @@ ewonssults = json.loads(ewonssults.content.decode())
 ewonlist = ewonssults["ewons"]
 
 print(" Online\n|------|")
+whatdoesthislooklike = []
 for anewon in ewonlist:
   if anewon["status"] == "online":
-    print(str(anewon["description"]+" - "+anewon["name"]))
-    thisewonssysinfo = "https://m2web.talk2m.com/t2mapi/get/"+anewon["name"]+"/proxy/10.11.104.11/WebView/SystemInfoPartial&t2maccount=Hartness&t2musername="+ew_usern+"&t2mpassword="+ew_passw+"&t2mdeveloperid="+ew_devid
     try:
-      tryingtoreach = requests.get(thisewonssysinfo,timeout=5.0)
-      with open(anewon["name"]+"_SysInfoPart.html","w") as fp:
-        fp.write(tryingtoreach.content.decode())
+      print("Starting thread for: "+str(anewon["description"]+" - "+anewon["name"]))
+      whatdoesthislooklike.append(threading.Thread(target=getthepcsysinfo,args=(str(anewon["name"]),),name=anewon["name"]+"_thread",daemon=True).start())
+      print("momentary: "+str(len(whatdoesthislooklike)))
     except Exception as exception:
       exc_type, exc_obj, exc_tb = sys.exc_info()
       errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
       print(errorstring)
 
-
-setdaewons = "https://m2web.talk2m.com/t2mapi/getewon?name=W750059&t2maccount=Hartness&t2musername="+ew_usern+"&t2mpassword="+ew_passw+"&t2mdeveloperid="+ew_devid
-updateewon = "https://m2web.talk2m.com/t2mapi/get/MyeWON/rcgi.bin/UpdateTagForm?&name=W750059&t2maccount=Hartness&t2musername="+ew_usern+"&t2mpassword="+ew_passw+"&t2mdeveloperid="+ew_devidupdateewon = 
-
+time.sleep(3)
+print("counting down(3): "+str(len(whatdoesthislooklike))+"\n"+str(whatdoesthislooklike))
+time.sleep(5)
+print("counting down(5): "+str(len(whatdoesthislooklike))+"\n"+str(whatdoesthislooklike))
+time.sleep(6)
+print("last count(6): "+str(len(whatdoesthislooklike))+"\n"+str(whatdoesthislooklike))
+  
 # str(tryingtoreach)
 # '<Response [200]>'
-A_F
+
+# setdaewons = "https://m2web.talk2m.com/t2mapi/getewon?name=W750059&t2maccount=Hartness&t2musername="+ew_usern+"&t2mpassword="+ew_passw+"&t2mdeveloperid="+ew_devid
+# updateewon = "https://m2web.talk2m.com/t2mapi/get/MyeWON/rcgi.bin/UpdateTagForm?description=Data%20Correction%20102&name=W750102&t2maccount=Hartness&t2musername="+ew_usern+"&t2mpassword="+ew_passw+"&t2mdeveloperid="+ew_devid
+
+# http://192.168.120.94/rcgi.bin/vows/readVars?_vars=TagName1,TagName2,TagName3
+
 # ################################################################################
 # 0: import requests                                                                                                    
 # 1: logmein = "https://m2web.talk2m.com/t2mapi/login?t2maccount=Hartness&t2musername=dthompson&t2mpassword=gettingvizzy
