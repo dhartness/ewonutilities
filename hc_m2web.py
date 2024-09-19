@@ -16,6 +16,7 @@ ew_sessn = json.loads(connectionsults.content.decode())["t2msession"]
 
 
 getdaewons = "https://m2web.talk2m.com/t2mapi/getewons?t2maccount=Hartness&t2musername="+ew_usern+"&t2mpassword="+ew_passw+"&t2mdeveloperid="+ew_devid
+#getdaewon = "https://m2web.talk2m.com/t2mapi/getewon?name=W750059&t2maccount=Hartness&t2musername="+ew_usern+"&t2mpassword="+ew_passw+"&t2mdeveloperid="+ew_devid
 ewonssults = requests.get(getdaewons)
 # print(ewonssults)
 ewonssults = json.loads(ewonssults.content.decode())
@@ -35,9 +36,13 @@ for anewon in ewonlist:
       errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
       print(errorstring)
 
+
+setdaewons = "https://m2web.talk2m.com/t2mapi/getewon?name=W750059&t2maccount=Hartness&t2musername="+ew_usern+"&t2mpassword="+ew_passw+"&t2mdeveloperid="+ew_devid
+updateewon = "https://m2web.talk2m.com/t2mapi/get/MyeWON/rcgi.bin/UpdateTagForm?&name=W750059&t2maccount=Hartness&t2musername="+ew_usern+"&t2mpassword="+ew_passw+"&t2mdeveloperid="+ew_devidupdateewon = 
+
 # str(tryingtoreach)
 # '<Response [200]>'
-
+A_F
 # ################################################################################
 # 0: import requests                                                                                                    
 # 1: logmein = "https://m2web.talk2m.com/t2mapi/login?t2maccount=Hartness&t2musername=dthompson&t2mpassword=gettingvizzy
