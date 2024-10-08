@@ -1,4 +1,5 @@
 import collections
+import ftplib
 import inspect
 import json
 import requests
@@ -90,38 +91,27 @@ class checkpcbehindewon:
     isitover = False
     try: #First lets find the software levels in the page.
       startingpoint = ewonpage.find(featver)
+      curopntag = startingpoint
+      endclstag = startingpoint
+
       if startingpoint > -1:
-        balance = 0
+        balance = 1
         startingpoint = startingpoint + len(featver)
         stoppingpoint = -1
-        cutdown = ewonpage[startingpoint:]
-        with open(ewonname+"_err.txt","a") as errfile:
-          errfile.write("csl1- "+"--------------------------"+ewonname+"-----------------------------"+"\n")
-          errfile.write("csl1- "+cutdown+"\n")
-          errfile.write("csl1- "+"--------------------------"+ewonname+"-----------------------------"+"\n")
-        # self.outputfield.append("--------------------------"+ewonname+"-----------------------------")
-        # self.outputfield.append(cutdown)
-        # self.outputfield.append("--------------------------"+ewonname+"-----------------------------")
         curpoint = -1
         while(not isitover):
-          opntag[1] = cutdown.find(opntag[0])
-          clstag[1] = cutdown.find(clstag[0])
+          opntag[1] = ewonpage.find(opntag[0], curopntag)
+          clstag[1] = ewonpage.find(clstag[0], endclstag)
           # I'm expecting an opening tag first. Else something is wrong.
           if opntag[1] < clstag[1]:
             balance += 1
-            cutdown = cutdown[opntag[1]:]
+            curopntag = opntag[1]+len(opntag[0])
           elif opntag[1] > clstag[1]:
             balance -= 1
-            cutdown = cutdown[clstag[1]:]
-          elif balance == 0:
+            endclstag = clstag[1]+len(clstag[0])
+          if balance == 0:
             isitover = True
-            cutdown = ewonpage[startingpoint:clstag[1]]
-            with open(ewonname+"_err.txt","a") as errfile:
-              errfile.write("csl2- "+"************************"+ewonname+"**************************"+"\n")
-              errfile.write("csl2- "+cutdown+"\n")
-              errfile.write("csl2- "+"************************"+ewonname+"**************************"+"\n")
-          elif balance < 0:
-            isitover = True
+            cutdown = ewonpage[startingpoint:endclstag]
     except Exception as exception:
       exc_type, exc_obj, exc_tb = sys.exc_info()
       errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
@@ -130,20 +120,24 @@ class checkpcbehindewon:
         errfile.write(errorstring+"\n")
     try:
       # We have what may be a successful search.
-      if opntag[1] < clstag[1]:
-        # Now lets split on the closing tag, then strip all of the tags from it.
-        softwares = cutdown.split(clstag[0])
-        for indsw in softwares:
-          indsw = indsw[indsw.find("H"):]
-        self.outputfield.append(softwares)
+      if curopntag < endclstag:
+        endclstag = endclstag-len(clstag[0])
+        softwares = ewonpage[startingpoint:endclstag].split(clstag[0])
+        for indsw in range(len(softwares)):
+          if(len(softwares[indsw].strip()) == 0):
+            softwares.pop(indsw)
+            break
+          else:
+            softwares[indsw] = "H"+softwares[indsw].split("H")[1]
         with open(ewonname+"_err.txt","a") as errfile:
-          errfile.write("csl3- "+str(softwares)+"\n")
-
+          errfile.write("csl1- "+"--------------------------"+ewonname+"-----------------------------"+"\n"+\
+            "csl4- "+"The balance was "+str(balance)+" startingpoint: "+str(startingpoint)+" opntag: "+str(opntag)+" clstag: "+str(clstag)+"\n"+\
+            "\n".join(softwares)+"\n")
       else:
-        self.outputfield.append("The balance was "+str(balance)+" startingpoint: "+str(startingpoint)+" opntag: "+str(opntag)+" clstag: "+str(clstag))
-        
-      with open(ewonname+"_err.txt","a") as errfile:
-        errfile.write("csl4- "+"The balance was "+str(balance)+" startingpoint: "+str(startingpoint)+" opntag: "+str(opntag)+" clstag: "+str(clstag)+"\n")
+        with open(ewonname+"_err.txt","a") as errfile:
+          errfile.write("csl1- "+"--------------------------"+ewonname+"-----------------------------"+"\n"+\
+            "csl4- "+"The balance was "+str(balance)+" startingpoint: "+str(startingpoint)+" opntag: "+str(opntag)+" clstag: "+str(clstag)+"\n"+\
+            " *** Unable to discern software and levels ***")
     except Exception as exception:
       exc_type, exc_obj, exc_tb = sys.exc_info()
       errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
@@ -173,6 +167,18 @@ class checkpcbehindewon:
       print(errorstring)
 
   ########################################################
+  ###  Method: ftpcheckupandout()
+  ###  Purpose:
+  ###  Date: 09/04/2024
+  ########################################################
+  def ftpcheckupandout(self):
+    # myconx = ftplib.FTP_TLS(hostname, username, password)
+    # myconx.prot_p()
+      # '200 Protection level set to P'
+    # myconx.dir()
+    # myconx.close()
+
+  ########################################################
   ###  Method: getthepcsysinfo()
   ###  Purpose:
   ###  Date: 09/04/2024
@@ -196,12 +202,12 @@ class checkpcbehindewon:
         # self.outputfield.append(ewonname+" returned "+str(tryingtoreach))
           errfile.write("4- "+ewonname+" returned "+str(tryingtoreach.status_code)+" type "+str(type(tryingtoreach.status_code))+"\n")
         if tryingtoreach.status_code == 200:
-          self.checksoftwarelevels(ewonname, tryingtoreach.text)
-          # errfile.write("5- "+"  writing "+ewonname+".html"+"\n")
-          # self.outputfield.append("  writing "+ewonname+".html")
           with open(ewonname+"_SysInfoPart.html","w") as fp:
             # fp.write(tryingtoreach.content.decode())
             fp.write(tryingtoreach.text)
+          self.checksoftwarelevels(ewonname, tryingtoreach.text)
+          # errfile.write("5- "+"  writing "+ewonname+".html"+"\n")
+          # self.outputfield.append("  writing "+ewonname+".html")
         else:
           with open(ewonname+"_err.txt","a") as errfile:
             errfile.write("6- "+"  dropping "+ewonname+".html"+"\n")
