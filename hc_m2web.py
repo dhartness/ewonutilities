@@ -70,7 +70,7 @@ class checkpcbehindewon:
           bustfree = False
         else:
           cnttru += 1
-      print(str(len(whatdoesthislooklike))+" (T:"+str(cnttru)+" F:"+str(cntfal)+")\n--\n")
+      print(str(len(whatdoesthislooklike))+" (T:"+str(cnttru)+" F:"+str(cntfal)+")\n--")
       # print(str(len(whatdoesthislooklike))+"(T:"+str(cnttru)+" F:"+str(cntfal)+") - "+str(whatdoesthislooklike)+"\n--\n")
       if bustfree:
         self.outputfield.append("All threads have completed.")
@@ -101,13 +101,6 @@ class checkpcbehindewon:
     spaces = self.findmyniche(ewonname, featver, ewonpage)
     try:
       if len(spaces) > 0:
-        for indsw in range(len(spaces)):
-          if(len(spaces[indsw].strip()) == 0):
-            spaces.pop(indsw)
-            break
-          else:
-            spaces[indsw] = spaces[indsw].split("<div>")[1][1:]
-            # spaces[indsw] = spaces[indsw][spaces[indsw].find(":")-1]+spaces[indsw].split(":")[1]
         with open(ewonname+"_err.txt","a") as errfile:
           errfile.write("csl1- "+"-------------------------- "+ewonname+" free space -----------------------------"+"\n"+\
             "\n".join(spaces)+"\n")
@@ -133,13 +126,6 @@ class checkpcbehindewon:
     softwares = self.findmyniche(ewonname, featver, ewonpage)
     try:
       if len(softwares) > 0:
-        for indsw in range(len(softwares)):
-          if(len(softwares[indsw].strip()) == 0):
-            softwares.pop(indsw)
-            break
-          else:
-            softwares[indsw] = softwares[indsw].split("<div>")[1][1:]
-            # softwares[indsw] = "H"+softwares[indsw].split("H")[1]
         with open(ewonname+"_err.txt","a") as errfile:
           errfile.write("csl1- "+"-------------------------- "+ewonname+" software -----------------------------"+"\n"+\
             "\n".join(softwares)+"\n")
@@ -222,6 +208,14 @@ class checkpcbehindewon:
       if curopntag < endclstag:
         endclstag = endclstag-len(clstag[0])
         termedlist = ewonpage[startingpoint:endclstag].split(clstag[0])
+        if len(termedlist) > 0:
+          for indsw in range(len(termedlist)):
+            if(len(termedlist[indsw].strip()) == 0):
+              termedlist.pop(indsw)
+              break
+            else:
+              termedlist[indsw] = termedlist[indsw].split("<div>")[1][1:].strip()
+
     except Exception as exception:
       exc_type, exc_obj, exc_tb = sys.exc_info()
       errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
@@ -269,6 +263,8 @@ class checkpcbehindewon:
             errfile.write("6- "+"  dropping .html because of status code "+str(tryingtoreach.status_code)+"\n")
           self.outputfield.append(ewonname+": "+"  dropping .html because of status code "+str(tryingtoreach.status_code))
           tryingtoreach = None
+      except requests.exceptions.RequestException:
+        pass
       except Exception as exception:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
