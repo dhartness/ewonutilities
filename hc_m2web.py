@@ -59,7 +59,7 @@ class checkpcbehindewon:
           errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
           #print(errorstring)
           self.outputfield.append(errorstring)
-    starttime = datetime.datetime.now()
+    starttime = time.perf_counter()
     while(True):
       cnttru = 0
       cntfal = 0
@@ -70,11 +70,12 @@ class checkpcbehindewon:
           bustfree = False
         else:
           cnttru += 1
-      print(str(len(whatdoesthislooklike))+"(T:"+str(cnttru)+" F:"+str(cntfal)+") - "+str(whatdoesthislooklike)+"\n--\n")
+      print(str(len(whatdoesthislooklike))+" (T:"+str(cnttru)+" F:"+str(cntfal)+")\n--\n")
+      # print(str(len(whatdoesthislooklike))+"(T:"+str(cnttru)+" F:"+str(cntfal)+") - "+str(whatdoesthislooklike)+"\n--\n")
       if bustfree:
         self.outputfield.append("All threads have completed.")
         break
-      elif (datetime.datetime.now - starttime) > maxtime:
+      elif (time.perf_counter() - starttime) > maxtime:
         self.outputfield.append("Some threads have timed out and will be stopped.")
         break
       #The two previous could be combined but I like them separated for reasons.
@@ -105,15 +106,14 @@ class checkpcbehindewon:
             spaces.pop(indsw)
             break
           else:
-            spaces[indsw] = spaces[indsw].split(" ",1)[1]
+            spaces[indsw] = spaces[indsw].split("<div>")[1][1:]
+            # spaces[indsw] = spaces[indsw][spaces[indsw].find(":")-1]+spaces[indsw].split(":")[1]
         with open(ewonname+"_err.txt","a") as errfile:
           errfile.write("csl1- "+"-------------------------- "+ewonname+" free space -----------------------------"+"\n"+\
-            "csl4- "+"The balance was "+str(balance)+" startingpoint: "+str(startingpoint)+" opntag: "+str(opntag)+" clstag: "+str(clstag)+"\n"+\
             "\n".join(spaces)+"\n")
       else:
         with open(ewonname+"_err.txt","a") as errfile:
           errfile.write("csl1- "+"-------------------------- "+ewonname+" free space -----------------------------"+"\n"+\
-            "csl4- "+"The balance was "+str(balance)+" startingpoint: "+str(startingpoint)+" opntag: "+str(opntag)+" clstag: "+str(clstag)+"\n"+\
             " *** Unable to discern drives and diskspace ***\n")
     except Exception as exception:
       exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -138,16 +138,15 @@ class checkpcbehindewon:
             softwares.pop(indsw)
             break
           else:
-            softwares[indsw] = "H"+softwares[indsw].split("H")[1]
+            softwares[indsw] = softwares[indsw].split("<div>")[1][1:]
+            # softwares[indsw] = "H"+softwares[indsw].split("H")[1]
         with open(ewonname+"_err.txt","a") as errfile:
           errfile.write("csl1- "+"-------------------------- "+ewonname+" software -----------------------------"+"\n"+\
-            "csl4- "+"The balance was "+str(balance)+" startingpoint: "+str(startingpoint)+" opntag: "+str(opntag)+" clstag: "+str(clstag)+"\n"+\
             "\n".join(softwares)+"\n")
       else:
         with open(ewonname+"_err.txt","a") as errfile:
           errfile.write("csl1- "+"-------------------------- "+ewonname+" software -----------------------------"+"\n"+\
-            "csl4- "+"The balance was "+str(balance)+" startingpoint: "+str(startingpoint)+" opntag: "+str(opntag)+" clstag: "+str(clstag)+"\n"+\
-            " *** Unable to discern software and levels ***")
+            " *** Unable to discern software and levels ***\n")
     except Exception as exception:
       exc_type, exc_obj, exc_tb = sys.exc_info()
       errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
@@ -163,12 +162,14 @@ class checkpcbehindewon:
   def displayresultshere(self):
     #make an internal list. Add twostrings to the list to be processed.
     try:
+      with open("hc_m2web.log","a") as logfile:
+        logfile.write("Starting displayresultshere at "+str(datetime.datetime.now())+"\n")
       print("Starting displayresultshere")
       while (not self.stopped):
         if len(self.outputfield):
           twostrings = self.outputfield.popleft()
           print(twostrings)
-          with open(hc_m2web.log) as logfile:
+          with open("hc_m2web.log","a") as logfile:
             logfile.write(twostrings+"\n")
         else:
           time.sleep(.5)
@@ -186,6 +187,7 @@ class checkpcbehindewon:
     opntag = ["<div>",-1]
     clstag = ["</div>",-1]
     isitover = False
+    termedlist = []
     try: #First lets find the software levels in the page.
       startingpoint = ewonpage.find(targety)
       curopntag = startingpoint
@@ -219,14 +221,13 @@ class checkpcbehindewon:
       # We have what may be a successful search.
       if curopntag < endclstag:
         endclstag = endclstag-len(clstag[0])
-        softwares = ewonpage[startingpoint:endclstag].split(clstag[0])
+        termedlist = ewonpage[startingpoint:endclstag].split(clstag[0])
     except Exception as exception:
       exc_type, exc_obj, exc_tb = sys.exc_info()
       errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
       self.outputfield.append(ewonname+": "+errorstring)
       with open(ewonname+"_err.txt","a") as errfile:
         errfile.write(errorstring+"\n")
-
     return termedlist
     
   ########################################################
@@ -259,10 +260,6 @@ class checkpcbehindewon:
           # self.outputfield.append("here we go")
           tryingtoreach = requests.get(thisewonssysinfo,timeout=5.0)
           errfile.write("3- "+str(tryingtoreach)+"\n")
-        with open(ewonname+"_err.txt","a") as errfile:
-        ### self.outputfield.append(ewonname+" returned "+str(tryingtoreach.status_code)+".")
-          self.outputfield.append(ewonname+": "+" returned "+str(tryingtoreach))
-          errfile.write("4- "+ewonname+" returned "+str(tryingtoreach.status_code)+" type "+str(type(tryingtoreach.status_code))+"\n")
         if tryingtoreach.status_code == 200:
           with open(ewonname+"_SysInfoPart.html","w") as fp:
             # fp.write(tryingtoreach.content.decode())
@@ -271,6 +268,7 @@ class checkpcbehindewon:
           with open(ewonname+"_err.txt","a") as errfile:
             errfile.write("6- "+"  dropping .html because of status code "+str(tryingtoreach.status_code)+"\n")
           self.outputfield.append(ewonname+": "+"  dropping .html because of status code "+str(tryingtoreach.status_code))
+          tryingtoreach = None
       except Exception as exception:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
@@ -294,7 +292,6 @@ class checkpcbehindewon:
   ########################################################
   def processthesite(self, ewonname, completionflag):
     try:
-      
       isanythingthere = self.getthepcsysinfo(ewonname)
       if isanythingthere != None:
         pagedump = isanythingthere.text
@@ -308,7 +305,7 @@ class checkpcbehindewon:
       self.outputfield.append(ewonname+": "+errorstring)
       with open(ewonname+"_err.txt","a") as errfile:
         errfile.write("7- "+errorstring+"\n")
-      self.outputfield.append(ewonname+": "+"Failed with exception. Check err log
+      self.outputfield.append(ewonname+": "+"Failed with exception. Check its error log")
       completionflag[0] = True
         
 
