@@ -443,6 +443,7 @@ class checkpcbehindewon:
     dirsfound = []
     filesfound = []
     conxgood = True
+    needtodownload = []
     # onlythefilesineed = []
     self.outputfield.append("Checking FTP site at "+hostname+" for current software levels.")
     print("Checking FTP site at "+hostname+" for current software levels.")
@@ -493,16 +494,23 @@ class checkpcbehindewon:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
         self.outputfield.append(errorstring)
+
+      try:
+        # Now to compare software levels between any archived file
+        for livevsarchive in onlythefilesineed:
+          didifind = None
+          didifind = [x for x in filestocompare if livevsarchive[0] in x]
+          if didifind:
+            self.outputfield.append("Comparing archived: "+didifind+" to live: "+livevsarchive+".")
+            if livevsarchive[1].split("_")[1] > didifind[1].split("_")[1]:
+              needtodownload.append(livevsarchive)
+        # And now to download identified higher software levels.
+      except Exception as exception:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
+        self.outputfield.append(errorstring)
       
-      #
-      #
-      #
-      #
-      #
-      #
-      #
-      
-      # Lets right this to a text file in case we can't connect next time.
+      # Lets write this to a text file in case we can't connect next time.
       if len(onlythefilesineed) > 0:
         self.outputfield.append("Length of software library is greater than zero. Will attempt to write to file.")
         try:
