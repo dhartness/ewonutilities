@@ -27,6 +27,12 @@ class checkpcbehindewon:
     self.compiledcamerapings = collections.deque()
 
     self.ftpserverfilelisting = []
+    try:
+      os.mkdir("ftparchive")
+    except Exception as exception:
+      exc_type, exc_obj, exc_tb = sys.exc_info()
+      errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
+      self.outputfield.append(errorstring)
     self.currentresultdate = "results"+str(datetime.datetime.now()).split()[0].replace("-","")
     try:
       os.mkdir(self.currentresultdate)
@@ -46,7 +52,7 @@ class checkpcbehindewon:
   def run(self):
     maxtime = 60
     starttime = 0
-    ewonlist = None
+    ewonlist = []
     self.outputfield.append("Launching display thread")
     theoutputter = threading.Thread(target=self.displayresultshere,args=(),name="outputter",daemon=True).start()
     self.outputfield.append("Is it running?")
@@ -81,54 +87,59 @@ class checkpcbehindewon:
       errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
       self.outputfield.append(errorstring)
     whatdoesthislooklike = []
-    try:
-      if len(ewonlist):
-        self.ftpcheckupandout(self.ftpserverfilelisting)
-      for anewon in ewonlist:
-        # print("checking "+str(len(whatdoesthislooklike)))
-        if anewon["status"] == "online":
-          try:
-            whatdoesthislooklike.append([False,str(anewon["name"])])
-            time.sleep(.15)
-            threading.Thread(target=self.processthesite,args=(str(anewon["name"]),whatdoesthislooklike[len(whatdoesthislooklike)-1]),name=anewon["name"]+"_thread",daemon=True).start()
-          except Exception as exception:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
-            self.outputfield.append(errorstring)
-    except Exception as exception:
-      exc_type, exc_obj, exc_tb = sys.exc_info()
-      errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
-      self.outputfield.append(errorstring)
-    self.outputfield.append(str(whatdoesthislooklike))
-    starttime = time.perf_counter()
-    try:
-      while(True):
-        cnttru = 0
-        cntfal = 0
-        bustfree = True
-        for jf in whatdoesthislooklike:
-          if jf[0] == False:
-            cntfal += 1
-            bustfree = False
+    # Check for the latest file versions.
+    self.ftpcheckupandout(self.ftpserverfilelisting)
+    if len(ewonlist):
+      try:
+        for anewon in ewonlist:
+          # print("checking "+str(len(whatdoesthislooklike)))
+          if anewon["status"] == "online":
+            try:
+              whatdoesthislooklike.append([False,str(anewon["name"])])
+              time.sleep(.15)
+              threading.Thread(target=self.processthesite,args=(str(anewon["name"]),whatdoesthislooklike[len(whatdoesthislooklike)-1]),name=anewon["name"]+"_thread",daemon=True).start()
+            except Exception as exception:
+              exc_type, exc_obj, exc_tb = sys.exc_info()
+              errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
+              self.outputfield.append(errorstring)
+      except Exception as exception:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
+        self.outputfield.append(errorstring)
+      self.outputfield.append(str(whatdoesthislooklike))
+      starttime = time.perf_counter()
+      try:
+        while(True):
+          cnttru = 0
+          cntfal = 0
+          bustfree = True
+          for jf in whatdoesthislooklike:
+            if jf[0] == False:
+              cntfal += 1
+              bustfree = False
+            else:
+              cnttru += 1
+          # print(str(len(whatdoesthislooklike))+" ("+str(cnttru).rjust(2)+"/"+str(cntfal).rjust(2)+")")
+          # print(str(len(whatdoesthislooklike))+"(T:"+str(cnttru)+" F:"+str(cntfal)+") - "+str(whatdoesthislooklike)+"\n--\n")
+          if bustfree:
+            self.outputfield.append("All threads have completed.")
+            print("All threads have completed.")
+            break
+          elif (time.perf_counter() - starttime) > maxtime:
+            self.outputfield.append("Some threads have timed out and will be stopped.")
+            break
+          #The two previous could be combined but I like them separated for reasons.
           else:
-            cnttru += 1
-        print(str(len(whatdoesthislooklike))+" (T:"+str(cnttru).rjust(3)+" F:"+str(cntfal).rjust(3)+")")
-        # print(str(len(whatdoesthislooklike))+"(T:"+str(cnttru)+" F:"+str(cntfal)+") - "+str(whatdoesthislooklike)+"\n--\n")
-        if bustfree:
-          self.outputfield.append("All threads have completed.")
-          break
-        elif (time.perf_counter() - starttime) > maxtime:
-          self.outputfield.append("Some threads have timed out and will be stopped.")
-          break
-        #The two previous could be combined but I like them separated for reasons.
-        else:
-          time.sleep(.25)
-    except Exception as exception:
-      exc_type, exc_obj, exc_tb = sys.exc_info()
-      errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
-      self.outputfield.append(errorstring)
+            time.sleep(.25)
+      except Exception as exception:
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
+        self.outputfield.append(errorstring)
 
-    self.collationatcompletion()
+      self.collationatcompletion()
+    else:
+      self.outputfield.append("There was no list of contactable EWON's detected.")
+      print("There was no list of contactable EWON's detected.")
     
     time.sleep(3)
 
@@ -242,7 +253,7 @@ class checkpcbehindewon:
     self.createcamerareport()
     try:
       with open("checkin"+self.currentresultdate+".csv","w") as compl:
-        compl.write("Software Check Results\n")
+        compl.write("Software Check Results ("+str(len(self.compiledsoftwareneeds))+")\n")
         try:
           with open("softwarereport.txt","r") as getsoft:
             apart = getsoft.read()
@@ -252,7 +263,7 @@ class checkpcbehindewon:
           exc_type, exc_obj, exc_tb = sys.exc_info()
           errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
           self.outputfield.append(errorstring)        
-        compl.write("\n\nDisk Check Results\n")
+        compl.write("\n\nDisk Check Results ("+str(len(self.compileddiskspaceneeds))+")\n")
         try:
           with open("diskspacereport.txt","r") as getdisk:
             apart = getdisk.read()
@@ -262,7 +273,7 @@ class checkpcbehindewon:
           exc_type, exc_obj, exc_tb = sys.exc_info()
           errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
           self.outputfield.append(errorstring)
-        compl.write("\n\nCamera Check Results\n")
+        compl.write("\n\nCamera Check Results ("+str(len(self.compiledcamerapings))+")\n")
         try:
           with open("campingsreport.txt","r") as getdisk:
             apart = getdisk.read()
@@ -324,7 +335,7 @@ class checkpcbehindewon:
       self.outputfield.append(errorstring)
 
   ########################################################
-  ###  Method: createfreespacereport()
+  ###  Method: createsoftwarereport()
   ###  Purpose:
   ###  Date: 04/04/2024
   ########################################################
@@ -445,9 +456,10 @@ class checkpcbehindewon:
     conxgood = True
     needtodownload = []
     # onlythefilesineed = []
-    self.outputfield.append("Checking FTP site at "+hostname+" for current software levels.")
+    self.outputfield.append("Checking FTP site at "+hostname+" for current software levels ("+str(datetime.datetime.now())+").")
     print("Checking FTP site at "+hostname+" for current software levels.")
 
+    # Support Methods for directories, files and both.
     def getmyfiles(currentry):
       if currentry.find(".") > -1:
         filesfound.append(currentry)
@@ -460,9 +472,11 @@ class checkpcbehindewon:
       filesfound.append(currentry)
 
     try:
+      # Connect to FTP Server
       myconx = ftplib.FTP_TLS(hostname, username, password, timeout=30)
       myconx.prot_p() # '200 Protection level set to P'
       myconx.dir(getmydirs)
+      # Navigating through the directories looking for .HCBackup files.
       for thisdir in dirsfound:
         try:
           filesfound.clear()
@@ -474,22 +488,22 @@ class checkpcbehindewon:
           for filly in filesfound:
             if ".HCBackup" in filly:
               onlythefilesineed.append([thisdir[49:],filly[49:].split(".HCBackup")[0]])
-              # onlythefilesineed.append([thisdir[49:],filly[49:]])
+              self.outputfield.append("__ "+str(onlythefilesineed[len(onlythefilesineed)-1]))
           myconx.cwd("..")
         except Exception as exception:
           exc_type, exc_obj, exc_tb = sys.exc_info()
           errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
           self.outputfield.append(errorstring)
           myconx.cwd("..")
-      # Let try to download these for convenience.
       self.outputfield.append("Compare to current version in the file and if its lower remove the old file and download the new one.")
+      # Retrieve current levels from our ftparchive if it exists.
+      filestocompare = []
       try:
-        if os.exists("ftparchive.txt"):
-          filestocompare = []
-          with open("ftparchive.txt","r") as savesw:
+        if os.path.exists("ftparchive\\ftparchive.txt"):
+          with open("ftparchive\\ftparchive.txt","r") as savesw:
             for line in savesw:
-              filestocompare.append(line[1:-1].replace("'","").split(","))
-              print(line)
+              filestocompare.append(line[1:-2].replace("'","").split(","))
+              # print(line)
       except Exception as exception:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
@@ -501,40 +515,88 @@ class checkpcbehindewon:
           didifind = None
           didifind = [x for x in filestocompare if livevsarchive[0] in x]
           if didifind:
-            self.outputfield.append("Comparing archived: "+didifind+" to live: "+livevsarchive+".")
-            if livevsarchive[1].split("_")[1] > didifind[1].split("_")[1]:
-              needtodownload.append(livevsarchive)
+            self.outputfield.append("Comparing archived: "+str(didifind)+" to live: "+str(livevsarchive)+".")
+            # print("liv: "+livevsarchive[1].split("_")[1]+" and did: "+didifind[0][1].split("_")[1])
+            # print("exists: "+"ftparchive\\"+(livevsarchive[1]+".HCBackup")+ " ? "+str(not os.path.exist("ftparchive\\"+(livevsarchive[1]+".HCBackup"))))
+            if (livevsarchive[1].split("_")[1] > didifind[0][1].split("_")[1]):
+              os.remove("ftparchive\\"+(didifind[0][1]+".HCBackup"))
+              needtodownload.append(livevsarchive) 
+            elif (livevsarchive[1].split("_")[1] == didifind[0][1].split("_")[1]) and \
+               (not os.path.exists("ftparchive\\"+(livevsarchive[1]+".HCBackup"))):
+              needtodownload.append(livevsarchive) 
+          else:
+            needtodownload.append(livevsarchive)
         # And now to download identified higher software levels.
+        self.outputfield.append("Need to download the more recent versions of: "+str(needtodownload))
+        print("Need to download the more recent versions of: "+str(needtodownload))
+        breakthisloop = False
+        howmanyefforts = 0
+        while not breakthisloop:
+          try:
+            for backupfiles in needtodownload:
+              # myconx.cwd(backupfiles[0]+"\\"+backupfiles[1]+".HCBackup") # Not correct syntax and for the wrong one
+              if os.path.exists("ftparchive\\"+(backupfiles[1]+".HCBackup")):
+                self.outputfield.append("The current "+backupfiles[1]+".HCBackup is already downloaded.")
+              else:
+                with open("ftparchive\\"+backupfiles[1]+".HCBackup", 'wb') as fp:
+                  self.outputfield.append("Trying to download "+str(backupfiles[1])+" from "+backupfiles[0]+"\\"+backupfiles[1]+".HCBackup.")
+                  print("Trying to download "+str(backupfiles)+" from "+backupfiles[0]+"\\"+backupfiles[1]+".HCBackup")
+                  myconx.retrbinary("RETR "+backupfiles[0]+"\\"+backupfiles[1]+".HCBackup", fp.write)
+            breakthisloop = True
+          except requests.exceptions.RequestException or TimeoutError or requests.exceptions.ConnectionError:
+            errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
+            self.outputfield.append("1-"+errorstring)
+            self.outputfield.append("We lost connection for "+errorstring+".\nWe need to reconnect.")
+            print("We lost connection for "+errorstring+".\nWe need to reconnect.")
+            if howmanyefforts < 5:
+              try:
+                howmanyefforts += 1
+                myconx = ftplib.FTP_TLS(hostname, username, password, timeout=30)
+                myconx.prot_p() # '200 Protection level set to P'
+              except Exception as exception:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
+                self.outputfield.append("2- "+errorstring)
+                breakthisloop = True
+            else:
+              self.outputfield.append("Tried to download software 5 times...bye!")
+              breakthisloop = True
+          except Exception as exception:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
+            self.outputfield.append("3- "+errorstring)
+            breakthisloop = True
+
       except Exception as exception:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
-        self.outputfield.append(errorstring)
+        self.outputfield.append("4- "+errorstring)
       
       # Lets write this to a text file in case we can't connect next time.
       if len(onlythefilesineed) > 0:
         self.outputfield.append("Length of software library is greater than zero. Will attempt to write to file.")
         try:
-          with open("ftparchive.txt","w") as savesw:
+          with open("ftparchive\\ftparchive.txt","w") as savesw:
             for j1 in onlythefilesineed:
               savesw.write(str(j1)+"\n")
-          self.outputfield.append("File \'ftparchive.txt\' has been created.")
+          self.outputfield.append("File \'ftparchive\\ftparchive.txt\' has been created.")
         except Exception as exception:
           exc_type, exc_obj, exc_tb = sys.exc_info()
           errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
-          self.outputfield.append("error, writing \'ftparchive.txt\':"+errorstring)
+          self.outputfield.append("error, writing \'ftparchive\\ftparchive.txt\':"+errorstring)
     except Exception as exception:
       exc_type, exc_obj, exc_tb = sys.exc_info()
       errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
       self.outputfield.append("issue connecting to ftp server, will try to use archived information - "+errorstring)
       conxgood = False
       try:
-        with open("ftparchive.txt","r") as savesw:
+        with open("ftparchive\\ftparchive.txt","r") as savesw:
           for line in savesw:
             # self.outputfield.append("Read line
             onlythefilesineed.append(line[1:-2].replace("'","").split(","))
-            print("** "+line)
-        print(onlythefilesineed)
-        self.outputfield.append("File \'ftparchive.txt\' has been read.")
+            # print("** "+line)
+        # print(onlythefilesineed)
+        self.outputfield.append("File \'ftparchive\\ftparchive.txt\' has been read.")
       except Exception as exception:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
@@ -550,6 +612,8 @@ class checkpcbehindewon:
       exc_type, exc_obj, exc_tb = sys.exc_info()
       errorstring = str(inspect.stack()[0][3])+" - "+str(exc_type)+" on l#"+str(exc_tb.tb_lineno)+": "+str(exception)
       self.outputfield.append(errorstring)
+    self.outputfield.append("Completed FTP check ("+str(datetime.datetime.now())+").")
+
 
   ########################################################
   ###  Method: getthepcsysinfo()
